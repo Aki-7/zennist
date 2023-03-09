@@ -7,6 +7,7 @@
 #include <cstring>
 #include <deque>
 #include <filesystem>
+#include <glm/ext/matrix_float4x4.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -30,6 +31,8 @@ class Viewer : public zukou::IBoundedDelegate, public zukou::ISystemDelegate
 
   bool Render(float radius, glm::mat4 transform, const char *model_path);
 
+  void Update(glm::mat4 transform);
+
  private:
   bool Load(const char *model_path);
   bool Setup();
@@ -40,6 +43,9 @@ class Viewer : public zukou::IBoundedDelegate, public zukou::ISystemDelegate
 
   void SetInitialPosition(float radius, glm::mat4 transform);
   glm::mat4 CalculateLocalModel();
+
+  std::vector<std::unique_ptr<zukou::GlBaseTechnique>> base_techniques_;
+  glm::mat4 base_model_;
 
   tinygltf::Model *model_;
   std::filesystem::path parent_dir_;

@@ -2,6 +2,12 @@
 
 #include <sys/mman.h>
 #include <unistd.h>
+#include <zukou.h>
+
+#include <algorithm>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/vector_float3.hpp>
+#include <memory>
 
 #include "gltf.vert.h"
 #include "gltf_color.frag.h"
@@ -255,8 +261,7 @@ Viewer::RenderMesh(const tinygltf::Mesh &mesh)
 {
   for (size_t i = 0; i < mesh.primitives.size(); ++i) {
     zukou::RenderingUnit *rendering_unit = new zukou::RenderingUnit(system_);
-    zukou::GlBaseTechnique *base_technique =
-        new zukou::GlBaseTechnique(system_);
+    auto base_technique = std::make_unique<zukou::GlBaseTechnique>(system_);
 
     if (!rendering_unit->Init(virtual_object_)) {
       ZennistError("Failed to initialize rendering_unit.");
@@ -289,33 +294,33 @@ Viewer::RenderMesh(const tinygltf::Mesh &mesh)
       base_technique->Bind(
           0, "in_texture", gl_texture, GL_TEXTURE_2D, &sampler_);
 
+      glm::vec2 uniform_offset(0.0f, 0.0f);
+      glm::vec2 uniform_scale(1.0f, 1.0f);
+      glm::vec1 uniform_rotation(0.0f);
       for (auto [extension, value] :
           material.pbrMetallicRoughness.baseColorTexture.extensions) {
         if (extension == "KHR_texture_transform") {
-          glm::vec2 uniform_offset(0.0f, 0.0f);
           if (value.Has("offset")) {
             auto offset = value.Get("offset");
             uniform_offset[0] = offset.Get(0).GetNumberAsDouble();
             uniform_offset[1] = offset.Get(1).GetNumberAsDouble();
           }
-          base_technique->Uniform(0, "in_offset", uniform_offset);
 
-          glm::vec2 uniform_scale(1.0f, 1.0f);
           if (value.Has("scale")) {
             auto scale = value.Get("scale");
             uniform_scale[0] = scale.Get(0).GetNumberAsDouble();
             uniform_scale[1] = scale.Get(1).GetNumberAsDouble();
           }
-          base_technique->Uniform(0, "in_scale", uniform_scale);
 
-          glm::vec1 uniform_rotation(0.0f);
           if (value.Has("rotation")) {
             auto rotation = value.Get("rotation");
             uniform_rotation[0] = rotation.GetNumberAsDouble();
           }
-          base_technique->Uniform(0, "in_rotation", uniform_rotation);
         }
       }
+      base_technique->Uniform(0, "in_offset", uniform_offset);
+      base_technique->Uniform(0, "in_scale", uniform_scale);
+      base_technique->Uniform(0, "in_rotation", uniform_rotation);
 
       glm::vec1 uniform_alpha_cutoff(0.0f);
       if (material.alphaMode == "MASK") {
@@ -413,19 +418,32 @@ Viewer::RenderMesh(const tinygltf::Mesh &mesh)
     }
 
     base_technique->Uniform(0, "local_model", CalculateLocalModel());
+    base_technique->Uniform(0, "base_model", base_model_);
 
     base_technique->DrawElements(mode, indexAccessor.count,
         indexAccessor.componentType, indexAccessor.byteOffset,
         gl_vertex_buffer_map_[indexAccessor.bufferView]);
+
+    base_techniques_.push_back(std::move(base_technique));
   }
 
   return true;
 }
 
 void
+Viewer::Update(glm::mat4 transform)
+{
+  base_model_ = transform;
+
+  for (auto &technique : base_techniques_) {
+    technique->Uniform(0, "base_model", base_model_);
+  }
+}
+
+void
 Viewer::SetInitialPosition(float radius, glm::mat4 transform)
 {
-  matrix_stack_.push_back(glm::scale(transform, glm::vec3(radius)));
+  base_model_ = glm::scale(transform, glm::vec3(radius));
 }
 
 glm::mat4

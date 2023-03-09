@@ -16,7 +16,6 @@ _sources = [
   'viewer.cc',
   'config.cc',
   'log.cc',
-  'main.cc',
 
   shaders['landscape']['vert'],
   shaders['landscape']['frag'],
@@ -44,9 +43,28 @@ _dependencies = [
 
 executable(
   'zennist',
-  _sources,
+  _sources + ['main.cc'],
   install: true,
   cpp_args: ['-include', 'constants.h'],
   dependencies: _dependencies,
   include_directories: public_inc,
 )
+
+executable(
+  'zennist-gltf-viewer',
+  _sources + ['gltf-viwer.cc'],
+  install: true,
+  cpp_args: ['-include', 'constants.h'],
+  dependencies: _dependencies,
+  include_directories: public_inc,
+)
+
+executable(
+  'zennist-gltf-space',
+  _sources + ['gltf-space.cc'],
+  install: true,
+  cpp_args: ['-include', 'constants.h'],
+  dependencies: _dependencies,
+  include_directories: public_inc,
+)
+
