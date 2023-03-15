@@ -23,7 +23,8 @@ jobs:
         run: |
           sudo apt-get update &&
           sudo apt-get install \
-            libwayland-dev wayland-protocols meson
+            libwayland-dev wayland-protocols libgtkmm-3.0-dev \
+            libgtk-layer-shell-dev meson
 
       - name: Checkout
         uses: actions/checkout@v2
